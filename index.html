@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>성공회 묵주 기도</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            background-color: #f9f7f1;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 { font-size: 1.5rem; color: #4a4a4a; margin-bottom: 20px; }
+        
+        .input-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+        }
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        .input-group input { 
+            width: 100%; padding: 10px; border: 1px solid #ccc; 
+            border-radius: 5px; box-sizing: border-box; font-size: 1rem;
+        }
+        
+        button#reset-btn {
+            background-color: #6b705c; color: white; border: none;
+            padding: 10px 20px; border-radius: 5px; cursor: pointer;
+            font-size: 1rem; width: 100%; transition: background 0.2s;
+        }
+        button#reset-btn:hover { background-color: #a5a58d; }
+
+        .display-section {
+            background: white;
+            width: 100%; max-width: 600px;
+            min-height: 150px;
+            padding: 20px; border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px; box-sizing: border-box;
+            font-size: 1.1rem; line-height: 1.6;
+            white-space: pre-wrap; /* 줄바꿈 유지 */
+            text-align: center;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        #rosary-svg {
+            background: transparent;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 구슬 기본 스타일 및 호버 효과 */
+        .bead { cursor: pointer; transition: all 0.3s ease; }
+        .bead:hover { filter: brightness(0.8); }
+        
+        /* 현재 클릭해야 할 구슬 강조 */
+        .active-bead { 
+            stroke: #d4a373; stroke-width: 4px; 
+            animation: pulse 1.5s infinite; 
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>성공회 묵주 기도</h1>
+
+    <div class="input-section">
+        <div class="input-group">
+            <label for="cruciform-input">십자가형(Cruciform) 구슬 기도문</label>
+            <input type="text" id="cruciform-input" placeholder="여기에 십자가형 구슬에서 바칠 기도를 입력하세요." value="오, 주님. 저를 불쌍히 여기소서.">
+        </div>
+        <div class="input-group">
+            <label for="week-input">주간(Week) 구슬 기도문</label>
+            <input type="text" id="week-input" placeholder="여기에 주간 구슬에서 바칠 기도를 입력하세요." value="주 예수 그리스도, 하느님의 아들이시여, 죄인인 저를 불쌍히 여기소서.">
+        </div>
+        <button id="reset-btn">초기화 및 처음부터 다시 시작</button>
+    </div>
+
+    <div class="display-section" id="prayer-display">
+        아래 반짝이는 십자가를 클릭하여 기도를 시작하세요.
+    </div>
+
+    <svg id="rosary-svg" width="400" height="550"></svg>
+
+    <script>
+        const svg = document.getElementById('rosary-svg');
+        const prayerDisplay = document.getElementById('prayer-display');
+        const cruciformInput = document.getElementById('cruciform-input');
+        const weekInput = document.getElementById('week-input');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // 기도문 고정 텍스트
+        const textCross = "성부와 성자와 성령의 이름으로. 아멘";
+        const textInvStart = "하늘에 계신 우리 아버지,\n온 세상이 아버지를 하느님으로 받들게 하시며\n아버지의 나라가 오게 하시며\n아버지의 뜻이 하늘에서와 같이 땅에서도 이루어지게 하소서.\n오늘 우리에게 필요한 양식을 주시고\n우리가 우리에게 잘못한 이를 용서하듯이\n우리의 잘못을 용서하시고\n우리를 유혹에 빠지지 않게 하시고, 악에서 구하소서.\n나라와 권세와 영광이 영원토록 아버지의 것이옵니다. 아멘";
+        const textInvEnd = "영광이 성부와 성자와 성령께,\n처음과 같이 지금도 그리고 영원히. 아멘";
+
+        const cx = 200; // 중심 X
+        const cy = 200; // 중심 Y
+        const radius = 130; // 묵주 고리 반지름
+
+        let sequence = [];
+        let currentStep = 0;
+
+        // 1. SVG에 묵주 그리기
+        function drawRosary() {
+            svg.innerHTML = ''; // 초기화
+
+            // 선 그리기 (고리와 펜던트)
+            const circlePath = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circlePath.setAttribute('cx', cx); circlePath.setAttribute('cy', cy);
+            circlePath.setAttribute('r', radius); circlePath.setAttribute('fill', 'none');
+            circlePath.setAttribute('stroke', '#ccc'); circlePath.setAttribute('stroke-width', '2');
+            svg.appendChild(circlePath);
+
+            const pendantLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            pendantLine.setAttribute('x1', cx); pendantLine.setAttribute('y1', cy + radius);
+            pendantLine.setAttribute('x2', cx); pendantLine.setAttribute('y2', 480);
+            pendantLine.setAttribute('stroke', '#ccc'); pendantLine.setAttribute('stroke-width', '2');
+            svg.appendChild(pendantLine);
+
+            // 십자가 (ID: cross) - Step 0
+            const crossGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            crossGroup.setAttribute('id', 'bead-cross');
+            crossGroup.setAttribute('class', 'bead');
+            crossGroup.innerHTML = `
+                <rect x="196" y="450" width="8" height="40" fill="#4a4a4a" rx="2"/>
+                <rect x="185" y="460" width="30" height="8" fill="#4a4a4a" rx="2"/>
+            `;
+            crossGroup.style.transformOrigin = '200px 470px';
+            svg.appendChild(crossGroup);
+
+            // 초대송 구슬 (ID: inv) - Step 1, Step 34
+            createBead('bead-inv', cx, 400, 12, '#6b705c');
+
+            // 묵주 고리 구슬 생성 (32개: 십자가형 4개 + 주간 28개)
+            // 하단(Cruciform 1)부터 시계방향으로 생성
+            for (let i = 0; i < 32; i++) {
+                const angle = Math.PI / 2 + (i * 2 * Math.PI / 32);
+                const x = cx + radius * Math.cos(angle);
+                const y = cy + radius * Math.sin(angle);
+
+                if (i % 8 === 0) {
+                    // Cruciform (십자가형)
+                    createBead(`bead-c${i/8 + 1}`, x, y, 10, '#b5838d');
+                } else {
+                    // Week (주간)
+                    const weekNum = Math.floor(i / 8) + 1;
+                    const beadNum = i % 8;
+                    createBead(`bead-w${weekNum}_${beadNum}`, x, y, 6, '#e5989b');
+                }
+            }
+        }
+
+        // SVG 구슬 생성 헬퍼 함수
+        function createBead(id, x, y, r, color) {
+            const bead = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            bead.setAttribute('id', id);
+            bead.setAttribute('class', 'bead');
+            bead.setAttribute('cx', x);
+            bead.setAttribute('cy', y);
+            bead.setAttribute('r', r);
+            bead.setAttribute('fill', color);
+            bead.style.transformOrigin = `${x}px ${y}px`;
+            svg.appendChild(bead);
+            
+            // 클릭 이벤트 리스너 추가
+            bead.addEventListener('click', () => handleBeadClick(id));
+        }
+
+        // 2. 기도 순서 시퀀스 정의
+        function initSequence() {
+            sequence = [
+                { id: 'bead-cross', type: 'cross' },
+                { id: 'bead-inv', type: 'invStart' }
+            ];
+
+            // 루프 (c1 -> w1 -> c2 -> w2 -> c3 -> w3 -> c4 -> w4)
+            for (let i = 0; i < 32; i++) {
+                if (i % 8 === 0) {
+                    sequence.push({ id: `bead-c${i/8 + 1}`, type: 'cruciform' });
+                } else {
+                    const weekNum = Math.floor(i / 8) + 1;
+                    const beadNum = i % 8;
+                    sequence.push({ id: `bead-w${weekNum}_${beadNum}`, type: 'week' });
+                }
+            }
+            
+            // 마지막 초대송
+            sequence.push({ id: 'bead-inv', type: 'invEnd' });
+        }
+
+        // 3. 구슬 클릭 로직
+        function handleBeadClick(clickedId) {
+            if (currentStep >= sequence.length) return; // 기도 종료
+
+            const expectedBead = sequence[currentStep];
+
+            // 순서에 맞지 않는 구슬을 클릭한 경우
+            if (clickedId !== expectedBead.id) {
+                alert("반짝이는 다음 순서의 구슬을 클릭해주세요.");
+                return;
+            }
+
+            // 기도문 출력
+            let text = "";
+            if (expectedBead.type === 'cross') text = textCross;
+            else if (expectedBead.type === 'invStart') text = textInvStart;
+            else if (expectedBead.type === 'cruciform') text = cruciformInput.value;
+            else if (expectedBead.type === 'week') text = weekInput.value;
+            else if (expectedBead.type === 'invEnd') text = textInvEnd;
+            
+            prayerDisplay.innerText = text;
+
+            // 클릭한 구슬 처리 (반투명, 애니메이션 제거)
+            const beadEl = document.getElementById(expectedBead.id);
+            beadEl.classList.remove('active-bead');
+            beadEl.style.opacity = '0.3';
+
+            // 다음 스텝으로 이동
+            currentStep++;
+            highlightNext();
+
+            if(currentStep === sequence.length) {
+                setTimeout(() => {
+                    prayerDisplay.innerText += "\n\n(기도가 모두 끝났습니다. 평안을 빕니다.)";
+                }, 500);
+            }
+        }
+
+        // 4. 다음 클릭할 구슬 강조
+        function highlightNext() {
+            if (currentStep < sequence.length) {
+                const nextBeadData = sequence[currentStep];
+                const nextBeadEl = document.getElementById(nextBeadData.id);
+                
+                // 마지막 초대송을 위해 다시 불투명하게 만듦
+                if(nextBeadData.type === 'invEnd') {
+                    nextBeadEl.style.opacity = '1'; 
+                }
+                
+                nextBeadEl.classList.add('active-bead');
+            }
+        }
+
+        // 5. 초기화 기능
+        function resetRosary() {
+            currentStep = 0;
+            prayerDisplay.innerText = "아래 반짝이는 십자가를 클릭하여 기도를 시작하세요.";
+            
+            // 모든 구슬 초기화
+            const beads = document.querySelectorAll('.bead');
+            beads.forEach(b => {
+                b.style.opacity = '1';
+                b.classList.remove('active-bead');
+            });
+
+            highlightNext();
+        }
+
+        resetBtn.addEventListener('click', resetRosary);
+
+        // 앱 초기 실행
+        drawRosary();
+        initSequence();
+        highlightNext();
+
+    </script>
+</body>
+</html>
