@@ -145,6 +145,8 @@
             crossGroup.style.transformOrigin = '200px 470px';
             svg.appendChild(crossGroup);
 
+            crossGroup.addEventListener('click', () => handleBeadClick('bead-cross'));
+
             // 초대송 구슬 (ID: inv) - Step 1, Step 34
             createBead('bead-inv', cx, 400, 12, '#6b705c');
 
