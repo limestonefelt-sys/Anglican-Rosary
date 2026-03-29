@@ -125,8 +125,33 @@
         let sequence = [];
         let currentStep = 0;
 
-        // 프라이드 플래그 색상 배열 (빨강, 주황, 노랑, 초록, 파랑, 보라)
         const prideColors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#3B82F6', '#A855F7'];
+
+        // --- 데이터 저장 및 불러오기 기능 ---
+        function loadSettings() {
+            const savedTheme = localStorage.getItem('rosaryTheme');
+            const savedCruciform = localStorage.getItem('rosaryCruciform');
+            const savedWeek = localStorage.getItem('rosaryWeek');
+
+            if (savedTheme) themeSelector.value = savedTheme;
+            if (savedCruciform) cruciformInput.value = savedCruciform;
+            if (savedWeek) weekInput.value = savedWeek;
+        }
+
+        function saveSettings() {
+            localStorage.setItem('rosaryTheme', themeSelector.value);
+            localStorage.setItem('rosaryCruciform', cruciformInput.value);
+            localStorage.setItem('rosaryWeek', weekInput.value);
+        }
+
+        // 입력값이 변경될 때마다 자동 저장
+        cruciformInput.addEventListener('input', saveSettings);
+        weekInput.addEventListener('input', saveSettings);
+        themeSelector.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+            saveSettings();
+        });
+        // ---------------------------------
 
         function drawRosary() {
             svg.innerHTML = '';
@@ -183,13 +208,11 @@
             bead.addEventListener('click', () => handleBeadClick(id));
         }
 
-        // --- 테마 적용 함수 ---
         function applyTheme(themeName) {
             const crossRects = document.querySelectorAll('#bead-cross rect');
             const invBead = document.getElementById('bead-inv');
 
             if (themeName === 'classic') {
-                // 클래식 테마 색상 적용
                 crossRects.forEach(rect => rect.setAttribute('fill', '#4a4a4a'));
                 invBead.setAttribute('fill', '#6b705c');
 
@@ -199,15 +222,13 @@
                     bead.setAttribute('fill', i % 8 === 0 ? '#b5838d' : '#e5989b');
                 }
             } else if (themeName === 'pride') {
-                // 프라이드 플래그 테마 색상 적용
-                crossRects.forEach(rect => rect.setAttribute('fill', '#4a4a4a')); // 십자가는 묵직하게 유지
-                invBead.setAttribute('fill', prideColors[5]); // 초대송 구슬은 보라색
+                crossRects.forEach(rect => rect.setAttribute('fill', '#4a4a4a')); 
+                invBead.setAttribute('fill', prideColors[5]); 
 
-                // 묵주 고리의 32개 구슬을 무지개색으로 순환
                 for (let i = 0; i < 32; i++) {
                     const id = i % 8 === 0 ? `bead-c${i/8 + 1}` : `bead-w${Math.floor(i/8)+1}_${i%8}`;
                     const bead = document.getElementById(id);
-                    bead.setAttribute('fill', prideColors[i % 6]); // 6가지 색상 반복
+                    bead.setAttribute('fill', prideColors[i % 6]);
                 }
             }
         }
@@ -290,19 +311,14 @@
             highlightNext();
         }
 
-        // 이벤트 리스너 설정
         resetBtn.addEventListener('click', resetRosary);
-        
-        // 테마 드롭다운이 변경될 때마다 applyTheme 실행
-        themeSelector.addEventListener('change', (e) => {
-            applyTheme(e.target.value);
-        });
 
-        // 앱 초기 실행
-        drawRosary();
-        applyTheme('classic'); // 초기 테마 적용
-        initSequence();
-        highlightNext();
+        // 앱 초기 실행 순서
+        loadSettings(); // 1. 저장된 설정 불러오기
+        drawRosary();   // 2. 묵주 그리기
+        applyTheme(themeSelector.value); // 3. 불러온 테마(또는 기본 테마) 적용하기
+        initSequence(); // 4. 기도 순서 초기화
+        highlightNext(); // 5. 첫 구슬 활성화
 
     </script>
 </body>
